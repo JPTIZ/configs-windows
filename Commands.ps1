@@ -1,5 +1,8 @@
 param(
-    [string] $task="Show-Help"
+    [parameter(
+        Mandatory=$false,
+        HelpMessage="Which task to execute."
+    )] [string] $task="Show-Help"
 )
 
 
@@ -8,7 +11,7 @@ param(
 # -----------------------------------------------------------------------------
 
 function Show-Help() {
-    Write-Host "Help: ?"
+    Get-Help ./Commands.ps1
 }
 
 
@@ -62,26 +65,51 @@ function First-Setup() {
     Setup-Profile
     Setup-Base-Tools
     Setup-Dev-Tools
+    Print-Done "Finished first setup."
 }
 
 
 function Setup-Profile() {
     Print-Info "  Setting up Profile..."
     # TODO: Copy Profile.ps1 to correct directory
-    Print-Info "  Done."
+    Print-Done "  :: Setup-Profile"
+}
+
+
+function Ensure-Installed(
+    [parameter(Mandatory)][string] $app,
+    [parameter(ValueFromRemainingArguments=$true)]
+    [string[]] $custom_install_command
+) {
+    $app_name = (Get-Culture).TextInfo.ToTitleCase($app)
+    Print-Info "Installing ${app_name}..."
+    Print-Info "  1. Checking if ${app_name} is already installed..."
+    if (Is-Installed $app) {
+        Print-Info "     ${app_name} is already installed."
+        return
+    }
+
+    Print-Info "     ${app_name} is not installed. Installing..."
+
+    if (!${custom_install_command}) {
+        Run-And-Log scoop install ${app}
+    } else {
+        & Run-And-Log @custom_install_command
+    }
 }
 
 
 function Setup-Base-Tools() {
     Print-Info "  Setting up base tools..."
-    Install-Scoop
+    Ensure-Installed scoop Install-Scoop
+    Ensure-Installed git
     Print-Info "  Cloning Linux configs..."
-    Print-Done "  Done (Setup-Base-Tools)"
+    Print-Done ":: Setup-Base-Tools"
 }
 
 
 function Setup-Dev-Tools() {
-    Install-Neovim
+    Setup-Neovim
 }
 
 
@@ -91,13 +119,6 @@ function Is-Installed([string] $program) {
 
 
 function Install-Scoop() {
-    Print-Info "Installing Scoop..."
-    Print-Info "  1. Checking if Scoop is already installed..."
-    if (Is-Installed scoop) {
-        Print-Info "     Scoop is already installed."
-        return
-    }
-
     # Snippet from: https://github.com/ScoopInstaller/Scoop#installation=
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
     Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
@@ -105,17 +126,9 @@ function Install-Scoop() {
 }
 
 
-function Install-Neovim() {
-    Print-Info "Intalling Neovim..."
-    Print-Info "  1. Checking if Neovim is already installed..."
-    if (Is-Installed nvim) {
-        Run-And-Log Write-Host "Nice"
-        Print-Info "     Neovim is already installed."
-        return
-    }
-    Run-And-Log "scoop install neovim"
+function Setup-Neovim() {
+    Ensure-Installed nvim scoop install neovim
     # TODO: Copy Neovim config files (+ vimrc) to Windows's Nvim config location
 }
 
-Write-Host "Executing task `"${task}`""
-& ${task}
+Run-And-Log ${task}
