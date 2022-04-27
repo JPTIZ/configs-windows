@@ -1,0 +1,15 @@
+name: Tools installed
+
+on: [push]
+
+jobs:
+  full-check:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Run First Setup
+        run: ./Commands.ps1 First-Setup
+      - name: Test neovim exists now
+        run: where nvim
