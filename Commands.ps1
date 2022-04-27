@@ -119,10 +119,14 @@ function Is-Installed([string] $program) {
 
 
 function Install-Scoop() {
-    # Snippet from: https://github.com/ScoopInstaller/Scoop#installation=
+    # Install instructions from: https://github.com/ScoopInstaller/Scoop#installation=
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-    Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-    # End of snippet
+    iwr -useb get.scoop.sh -outfile 'ScoopInstall.ps1'
+    if (${env:CI}) {
+        ./ScoopInstall.ps1 -RunAsAdmin
+    } else {
+        ./ScoopInstall.ps1
+    }
 }
 
 

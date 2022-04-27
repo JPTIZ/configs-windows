@@ -1,9 +1,10 @@
-name: Tools installed
+name: Windows config script tests
 
 on: [push]
 
 jobs:
   full-check:
+    name: First Setup
     runs-on: windows-latest
 
     steps:
