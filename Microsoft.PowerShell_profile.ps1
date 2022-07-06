@@ -1,3 +1,7 @@
+Set-PSReadlineKeyHandler -Key ctrl+d -Function ViExit
+
+Set-Alias -Name vim -Value nvim -Force
+
 function Prompt
 {
     $OriginalLastExitCode = $LastExitCode
@@ -30,9 +34,9 @@ function Prompt
         }
         else {
             # tree is clean
-            $BranchColor = "Green"
+            $BranchColor = "DarkGreen"
         }
-        $BranchName = "$(git symbolic-ref HEAD | cut -d/ -f3-)"
+        $BranchName = "$(git symbolic-ref HEAD | ForEach-Object { $_.split("/")[2] })"
         Write-Host -NoNewline ${BranchName} -Foreground ${BranchColor}
         Write-Host -NoNewline "]"
     }
@@ -41,7 +45,7 @@ function Prompt
     Write-Host -NoNewline " $ "
 
     " "
-    $OriginalLastExitCode = $LastExitCode
+    $global:LastExitCode = $OriginalLastExitCode
 }
 
 function PSvcvars64 {
@@ -120,4 +124,12 @@ function Activate {
     echo "= Activating ${environment}"
     Import-Module "${env:USERPROFILE}/Documents/WindowsPowerShell/Modules/${environment}.psm1"
     echo "= [${environment}] Done."
+}
+
+function Mosh-Tmux {
+    param(
+        [parameter(ValueFromRemainingArguments=$true)]
+        [string[]] $mosh_args
+    )
+    & mosh --no-init @mosh_args # -- tmux new-session -ADs default
 }
