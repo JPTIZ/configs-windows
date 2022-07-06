@@ -6,6 +6,10 @@ param(
 )
 
 
+${GIT_CONFIGS_PATH} = "${env:HOMEPATH}/.git-configs"
+${CONFIGS_PATH} = "${env:HOMEPATH}/.config"
+
+
 # =============================================================================
 # Utilities
 # -----------------------------------------------------------------------------
@@ -56,26 +60,6 @@ function Run-And-Log {
 }
 
 
-# =============================================================================
-# Main functions
-# -----------------------------------------------------------------------------
-
-function First-Setup() {
-    Print-Step "Executing first setup steps..."
-    Setup-Profile
-    Setup-Base-Tools
-    Setup-Dev-Tools
-    Print-Done "Finished first setup."
-}
-
-
-function Setup-Profile() {
-    Print-Info "  Setting up Profile..."
-    # TODO: Copy Profile.ps1 to correct directory
-    Print-Done "  :: Setup-Profile"
-}
-
-
 function Ensure-Installed(
     [parameter(Mandatory)][string] $app,
     [parameter(ValueFromRemainingArguments=$true)]
@@ -99,23 +83,28 @@ function Ensure-Installed(
 }
 
 
-function Setup-Base-Tools() {
-    Print-Info "  Setting up base tools..."
-    Ensure-Installed scoop Install-Scoop
-    Ensure-Installed git
-    Print-Info "  Cloning Linux configs..."
-    Print-Done ":: Setup-Base-Tools"
-}
-
-
-function Setup-Dev-Tools() {
-    Setup-Neovim
-}
-
-
 function Is-Installed([string] $program) {
     return Get-Command $program -ErrorAction SilentlyContinue
 }
+
+
+function Link-File([string] $link_path, [string] $links_to) {
+    if (!(Test-Path -Path "${link_path}")) {
+        New-Item -ItemType HardLink -Path "${link_path}" -Target "${links_to}"
+    }
+}
+
+
+function Link-Dir([string] $link_path, [string] $links_to) {
+    if (!(Test-Path -Path "${link_path}")) {
+        New-Item -ItemType Junction -Path "${link_path}" -Target "${links_to}"
+    }
+}
+
+
+# =============================================================================
+# Custom install functions
+# -----------------------------------------------------------------------------
 
 
 function Install-Scoop() {
@@ -130,9 +119,68 @@ function Install-Scoop() {
 }
 
 
-function Setup-Neovim() {
+# =============================================================================
+# Main functions
+# -----------------------------------------------------------------------------
+
+function First-Setup() {
+    Print-Step "Executing first setup steps..."
+    Setup-Base-Tools
+    Setup-Dev-Tools
+    Setup-Config-Files
+    Setup-Profile
+    Print-Done "Finished first setup."
+}
+
+
+function Setup-Profile() {
+    Print-Info "  Setting up Profile..."
+    Link-File "${PROFILE}" "Microsoft.PowerShell_profile.ps1"
+    Print-Done "  :: Setup-Profile"
+}
+
+
+function Setup-Base-Tools() {
+    Print-Info "  Setting up base tools..."
+    Ensure-Installed scoop Install-Scoop
+    Ensure-Installed git
+    Print-Done ":: Setup-Base-Tools"
+}
+
+
+function Setup-Dev-Tools() {
+    Run-And-Log scoop bucket add extras
+    Ensure-Installed wezterm scoop install extras/wezterm
     Ensure-Installed nvim scoop install neovim
-    # TODO: Copy Neovim config files (+ vimrc) to Windows's Nvim config location
+    Ensure-Installed mosh scoop install mosh-client
+}
+
+
+function Setup-Config-Files() {
+    if (Test-Path -Path "${GIT_CONFIGS_PATH}") {
+        Print-Info "  ${GIT_CONFIGS_PATH} already exists. Skip repository cloning..."
+    } else {
+        Print-Info "  Cloning Linux configs..."
+        git clone https://gitlab.com/jptiz/configs ${GIT_CONFIGS_PATH}
+    }
+
+    Print-Info "  Creating config directory (${CONFIGS_PATH})..."
+    [void](New-Item -Path "${CONFIGS_PATH}" -ItemType "directory" -Force)
+
+    Print-Info "  Creating links to config files from applications to their Windows directory:"
+    Print-Info "      - Wezterm"
+    Link-Dir "${CONFIGS_PATH}/wezterm" "${GIT_CONFIGS_PATH}/files/wezterm"
+    Print-Info "      - Neovim"
+    Link-Dir "${env:HOMEPATH}/AppData/Local/nvim" "${GIT_CONFIGS_PATH}/files/vim"
+    Print-Info "      - Git (config, ignore)"
+    cp -Force "${GIT_CONFIGS_PATH}/files/gitconfig" "${env:HOMEPATH}/.gitconfig"
+    cp -Force "${GIT_CONFIGS_PATH}/files/gitignore" "${env:HOMEPATH}/.gitignore"
+    Print-Done ":: Setup-Config-Files"
+}
+
+
+function Setup-Extra-Tools() {
+    Ensure-Installed btm scoop install bottom
 }
 
 Run-And-Log ${task}
