@@ -135,7 +135,11 @@ function First-Setup() {
 
 function Setup-Profile() {
     Print-Info "  Setting up Profile..."
-    Run-And-Log Link-File "${PROFILE}" "${PWD}/Microsoft.PowerShell_profile.ps1"
+    if ("${PROFILE}"[0] -eq "${PWD}"[0]) {
+        Run-And-Log Link-File "${PROFILE}" "${PWD}/Microsoft.PowerShell_profile.ps1"
+    } else {
+        Run-And-Log cp "${PWD}/Microsoft.PowerShell_profile.ps1" "${PROFILE}"
+    }
     Print-Done "  :: Setup-Profile"
 }
 
